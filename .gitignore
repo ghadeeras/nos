@@ -1,0 +1,4 @@
+.idea/
+bootdrv/
+kernel.obj
+*.iml
