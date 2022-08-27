@@ -146,19 +146,6 @@ struc EFI_RUNTIME_SERVICES_TABLE
     .ResetSystem		    pointer
 endstruc
 
-struc EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL
-    .Reset             pointer
-    .OutputString      pointer
-    .TestString	       pointer
-    .QueryMode	       pointer
-    .SetMode	       pointer
-    .SetAttribute      pointer
-    .ClearScreen       pointer
-    .SetCursorPosition pointer
-    .EnableCursor      pointer
-    .Mode              pointer
-endstruc
-
 struc SIMPLE_TEXT_INPUT_PROTOCOL
     .Reset			pointer
     .ReadKeyStroke	pointer
@@ -207,9 +194,62 @@ struc EFI_TIME
     .Pad2		int8
 endstruc
 
+%macro efiCall 1
+    sub rsp, 4 * 8 ; Room for rcx, rdx, r8 and r9
+    call [%1]
+    add rsp, 4 * 8
+%endmacro
+
+section .text
+
+; A function to initialize the UEFI module
+; Input:
+;   R10 = EFI Handle
+;   R11 = EFI System Table Address
+; Output:
+;   RAX = 0 if successful, -1 otherwise
+efiInit:
+    fnEnter
+
+    ; Sanity checks
+    or R10, R10
+    jz efiInit_err
+
+    or R11, R11
+    jz efiInit_err
+
+    mov rdx, EFI_SYSTEM_TABLE_SIGNATURE
+    cmp rdx, [r11 + EFI_TABLE_HEADER.Signature]
+    jne efiInit_err
+
+    mov rdx, EFI_SYSTEM_TABLE_size
+    cmp rdx, [r11 + EFI_TABLE_HEADER.HeaderSize]
+    jl efiInit_err
+
+    ; Save important resource handles and services
+    mov [rel efiHandle], R10
+    mov [rel efiSystemTable], R11
+
+    fnReturn 0
+efiInit_err:
+    fnReturn -1
+
+efiFirmwareVendor:
+    fnEnter
+    mov rbx, [rel efiSystemTable]
+    mov rbx, [rbx + EFI_SYSTEM_TABLE.FirmwareVendor]
+    fnReturn 0
+
+efiFirmwareRevision:
+    fnEnter
+    mov rbx, [rel efiSystemTable]
+    mov rbx, [rbx + EFI_SYSTEM_TABLE.FirmwareRevision]
+    fnReturn 0
+
 section .data
     ; GUIDs
-    EFI_CONSOLE_OUTPUT_PROTOCOL_UUID    db dword 0x387477c2, word 0x69c7, word 0x11d2, 0x8e,0x39,0x00,0xa0,0xc9,0x69,0x72,0x3b
     EFI_GRAPHICS_OUTPUT_PROTOCOL_UUID   db dword 0x9042a9de, word 0x23dc, word 0x4a38, 0x96,0xfb,0x7a,0xde,0xd0,0x80,0x51,0x6a
 
+    efiHandle       dq 0
+    efiSystemTable  dq 0
 %endif

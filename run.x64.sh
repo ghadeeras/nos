@@ -5,7 +5,7 @@ rm -R ./bootdrv
 mkdir -p bootdrv/EFI/Boot/ || exit 1
 
 echo "Compiling ..."
-nasm -f win64 -o ./kernel.obj -i ./src/x64 ./src/x64/kernel.asm || exit 1
+nasm -f win64 -Le -l ./kernel.lst -o ./kernel.obj -i ./src/x64 ./src/x64/kernel.asm || exit 1
 
 echo "Linking ..."
 lld-link -subsystem:efi_application -nodefaultlib -dll -entry:start -out:./bootdrv/EFI/Boot/bootx64.efi ./kernel.obj || exit 1
